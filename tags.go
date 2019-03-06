@@ -115,8 +115,10 @@ func (tags Tags) ForLogrus(merge logrus.Fields) logrus.Fields {
 	for k, v := range tags {
 		fields[k] = v
 	}
-	for k, v := range merge {
-		fields[k] = v
+	if merge != nil {
+		for k, v := range merge {
+			fields[k] = v
+		}
 	}
 	return fields
 }
@@ -128,8 +130,10 @@ func (tags Tags) ForEchoLogger(merge LogMap) labstacklog.JSON {
 	for k, v := range tags {
 		fields[k] = v
 	}
-	for k, v := range merge {
-		fields[k] = v
+	if merge != nil {
+		for k, v := range merge {
+			fields[k] = v
+		}
 	}
 	return fields
 }
