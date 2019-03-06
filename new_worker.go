@@ -13,13 +13,13 @@ var (
 )
 
 var (
-	dummyWorkerCount = metricworker.NewWorkerCount(nil, ``)
-	dummyWorkerGauge = metricworker.NewWorkerGauge(nil, ``)
-	dummyWorkerGaugeFloat = metricworker.NewWorkerGaugeFloat(nil, ``)
+	dummyWorkerCount                 = metricworker.NewWorkerCount(nil, ``)
+	dummyWorkerGauge                 = metricworker.NewWorkerGauge(nil, ``)
+	dummyWorkerGaugeFloat            = metricworker.NewWorkerGaugeFloat(nil, ``)
 	dummyWorkerGaugeFloatAggregative = metricworker.NewWorkerGaugeFloatAggregative(nil, ``)
-	dummyWorkerGaugeFunc = metricworker.NewWorkerGaugeFunc(nil, ``, nil)
-	dummyWorkerGaugeFloatFunc = metricworker.NewWorkerGaugeFloatFunc(nil, ``, nil)
-	dummyWorkerTiming = metricworker.NewWorkerTiming(nil, ``)
+	dummyWorkerGaugeFunc             = metricworker.NewWorkerGaugeFunc(nil, ``, nil)
+	dummyWorkerGaugeFloatFunc        = metricworker.NewWorkerGaugeFloatFunc(nil, ``, nil)
+	dummyWorkerTiming                = metricworker.NewWorkerTiming(nil, ``)
 )
 
 func init() {
@@ -52,7 +52,7 @@ func createWorkerCount(key string, tags AnyTags) (WorkerCount, error) {
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerCount(metrics.GetSender(), statsdKey)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)
@@ -64,7 +64,7 @@ func createWorkerGauge(key string, tags AnyTags) (WorkerGauge, error) {
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerGauge(metrics.GetSender(), statsdKey)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)
@@ -76,7 +76,7 @@ func createWorkerGaugeFloat(key string, tags AnyTags) (WorkerGaugeFloat, error) 
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerGaugeFloat(metrics.GetSender(), statsdKey)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)
@@ -88,7 +88,7 @@ func createWorkerGaugeFloatAggregative(key string, tags AnyTags) (WorkerGaugeFlo
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerGaugeFloatAggregative(metrics.GetSender(), statsdKey)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)
@@ -100,7 +100,7 @@ func createWorkerGaugeFunc(key string, tags AnyTags, fn func() int64) (WorkerGau
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerGaugeFunc(metrics.GetSender(), statsdKey, fn)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)
@@ -112,7 +112,7 @@ func createWorkerGaugeFloatFunc(key string, tags AnyTags, fn func() float64) (Wo
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerGaugeFloatFunc(metrics.GetSender(), statsdKey, fn)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)
@@ -124,7 +124,7 @@ func createWorkerTiming(key string, tags AnyTags) (WorkerTiming, error) {
 	}
 	keyBuf := generateStorageKey("", key, tags)
 	statsdKey := keyBuf.result.String()
-	keyBuf.Unlock()
+	keyBuf.Release()
 	worker := metricworker.NewWorkerTiming(metrics.GetSender(), statsdKey)
 	worker.SetGCEnabled(true)
 	return worker, runAndRegisterWorkerWrapper(key, worker, tags)

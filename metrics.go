@@ -74,43 +74,29 @@ func (m *Metrics) GetSendInterval() time.Duration {
 }
 
 type preallocatedStringerBuffer struct {
-	locker  int32
 	result  bytes.Buffer
 	tagKeys sort.StringSlice
 }
 
-func (buf *preallocatedStringerBuffer) Lock() {
-	for !atomic.CompareAndSwapInt32(&buf.locker, 0, 1) {
-		runtime.Gosched()
-	}
+func (buf *preallocatedStringerBuffer) Release() {
+	buf.result.Reset()
+	buf.tagKeys = buf.tagKeys[:0]
+	stringerBufs.Put(buf)
 }
 
-func (buf *preallocatedStringerBuffer) Unlock() {
-	atomic.AddInt32(&buf.locker, -1)
-}
-
-type preallocatedGetterBuffer struct {
+/*type preallocatedGetterBuffer struct {
 	sync.Mutex
 	pc     []uintptr
 	result bytes.Buffer
-}
+}*/
 
 var (
-	stringerBufs       [maxConcurrency]*preallocatedStringerBuffer
-	stringerBufPointer uint64
-
-/*	getterBufs       [maxConcurrency]*preallocatedGetterBuffer
-	getterBufPointer uint64*/
-)
-
-func init() {
-	for i := 0; i < maxConcurrency; i++ {
-		stringerBufs[i] = &preallocatedStringerBuffer{}
-		/*getterBufs[i] = &preallocatedGetterBuffer{
-			pc: make([]uintptr, 8),
-		}*/
+	stringerBufs = sync.Pool{
+		New: func() interface{} {
+			return &preallocatedStringerBuffer{}
+		},
 	}
-}
+)
 
 /*func (m *Metrics) getCallerCacheKey() *preallocatedGetterBuffer {
 	curBufPointer := atomic.AddUint64(&getterBufPointer, 1)
@@ -138,7 +124,7 @@ func (m *Metrics) get(metricType MetricType, key string, tags AnyTags) *Metric {
 	considerHiddenTags(tags)
 	storageKeyBuf := generateStorageKey(metricType, key, tags)
 	rI, _ := m.storage.GetByBytes(storageKeyBuf.result.Bytes())
-	storageKeyBuf.Unlock()
+	storageKeyBuf.Release()
 	if rI == nil {
 		return nil
 	}
@@ -377,7 +363,7 @@ func register(name string, worker Worker, description string, inTags AnyTags) er
 	storageKey := storageKeyBuf.result.Bytes()
 	metric.storageKey = make([]byte, len(storageKey))
 	copy(metric.storageKey, storageKey)
-	storageKeyBuf.Unlock()
+	storageKeyBuf.Release()
 	return metrics.Set(metric)
 }
 
@@ -441,12 +427,7 @@ func generateStorageKey(metricType MetricType, key string, tags AnyTags) *preall
 	// It's required to avoid memory allocations. So if we allocated a buffer once, we reuse it.
 	// We have buffers (of amount maxConcurrency) to be able to process this function concurrently.
 
-	curBufPointer := atomic.AddUint64(&stringerBufPointer, 1)
-	curBufPointer %= maxConcurrency
-	buf := stringerBufs[curBufPointer]
-	buf.Lock()
-
-	buf.result.Reset()
+	buf := stringerBufs.Get().(*preallocatedStringerBuffer)
 
 	buf.result.WriteString(key)
 
@@ -460,7 +441,6 @@ func generateStorageKey(metricType MetricType, key string, tags AnyTags) *preall
 	switch inTags := tags.(type) {
 	case nil:
 	case Tags:
-		buf.tagKeys = buf.tagKeys[:0]
 		for k, _ := range inTags {
 			if defaultTags.IsSet(k) {
 				continue
@@ -492,7 +472,6 @@ func generateStorageKey(metricType MetricType, key string, tags AnyTags) *preall
 			buf.result.Write(tag.Value)
 		}
 	default:
-		buf.tagKeys = buf.tagKeys[:0]
 		inTags.Each(func(k string, v interface{}) bool {
 			if defaultTags.IsSet(k) {
 				return true
